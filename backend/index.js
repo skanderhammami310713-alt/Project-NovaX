@@ -1,65 +1,69 @@
-const Express = require("express");
-const express = Express();
-const fs = require("fs");
-const path = require("path");
-const cookieParser = require("cookie-parser");
+const express = require('express');
+const app = express();
+app.use(express.json());
 
-express.use(Express.json());
-express.use(Express.urlencoded({ extended: true }));
-express.use(Express.static('public'));
-express.use(cookieParser());
+// In-memory or database storage for player currencies (use a database for production)
+let playerCurrency = {}; 
 
-express.use(require("./structure/party.js"));
-express.use(require("./structure/discovery.js"))
-express.use(require("./structure/privacy.js"));
-express.use(require("./structure/timeline.js"));
-express.use(require("./structure/user.js"));
-express.use(require("./structure/contentpages.js"));
-express.use(require("./structure/friends.js"));
-express.use(require("./structure/main.js"));
-express.use(require("./structure/storefront.js"));
-express.use(require("./structure/version.js"));
-express.use(require("./structure/lightswitch.js"));
-express.use(require("./structure/affiliate.js"));
-express.use(require("./structure/matchmaking.js"));
-express.use(require("./structure/cloudstorage.js"));
-express.use(require("./structure/mcp.js"));
+// --- 1. DAILY ITEM SHOP CONFIGURATION ---
+// You can manually edit this array to choose what items deploy in the shop each day!
+const dailyItemShop = [
+    {
+        id: "cosmetic_skin_01",
+        name: "Aura Outfit",
+        price: 800,
+        type: "outfit"
+    },
+    {
+        id: "cosmetic_pickaxe_02",
+        name: "Star Wand",
+        price: 500,
+        type: "pickaxe"
+    },
+    {
+        id: "cosmetic_emote_03",
+        name: "Floss",
+        price: 200,
+        type: "emote"
+    }
+];
 
-const port = process.env.PORT || 3551;
-express.listen(port, () => {
-    console.log("LawinServer started listening on port", port);
-
-    require("./structure/xmpp.js");
-}).on("error", (err) => {
-    if (err.code == "EADDRINUSE") console.log(`\x1b[31mERROR\x1b[0m: Port ${port} is already in use!`);
-    else throw err;
-
-    process.exit(0);
+// Endpoint for the game/launcher to fetch the current Item Shop
+app.get('/api/shop/get', (req, res) => {
+    res.json({
+        success: true,
+        shopItems: dailyItemShop
+    });
 });
 
-try {
-    if (!fs.existsSync(path.join(process.env.LOCALAPPDATA, "LawinServer"))) fs.mkdirSync(path.join(process.env.LOCALAPPDATA, "LawinServer"));
-} catch (err) {
-    // fallback
-    if (!fs.existsSync(path.join(__dirname, "ClientSettings"))) fs.mkdirSync(path.join(__dirname, "ClientSettings"));
-}
+// --- 2. REWARD SYSTEM (Kills & Wins) ---
+app.post('/api/player/reward', (req, res) => {
+    const { accountId, eventType } = req.body; // eventType can be 'kill' or 'win'
+    
+    if (!playerCurrency[accountId]) {
+        playerCurrency[accountId] = { vbucks: 0 };
+    }
 
-// if endpoint not found, return this error
-express.use((req, res, next) => {
-    var XEpicErrorName = "errors.com.lawinserver.common.not_found";
-    var XEpicErrorCode = 1004;
+    if (eventType === 'kill') {
+        playerCurrency[accountId].vbucks += 100;
+    } else if (eventType === 'win') {
+        playerCurrency[accountId].vbucks += 300;
+    }
 
-    res.set({
-        'X-Epic-Error-Name': XEpicErrorName,
-        'X-Epic-Error-Code': XEpicErrorCode
-    });
-
-    res.status(404);
     res.json({
-        "errorCode": XEpicErrorName,
-        "errorMessage": "Sorry the resource you were trying to find could not be found",
-        "numericErrorCode": XEpicErrorCode,
-        "originatingService": "any",
-        "intent": "prod"
+        success: true,
+        balance: playerCurrency[accountId].vbucks
     });
+});
+
+// Endpoint to check player V-Bucks balance
+app.get('/api/player/balance/:accountId', (req, res) => {
+    const { accountId } = req.params;
+    const balance = playerCurrency[accountId] ? playerCurrency[accountId].vbucks : 0;
+    res.json({ success: true, vbucks: balance });
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`NovaX backend is running on port ${PORT}`);
 });
