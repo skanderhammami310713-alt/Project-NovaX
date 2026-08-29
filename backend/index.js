@@ -10,20 +10,20 @@ let playerCurrency = {};
 const dailyItemShop = [
     {
         id: "cosmetic_skin_01",
-        name: "Aura Outfit",
+        name: "Mariana outfit",
         price: 800,
         type: "outfit"
     },
     {
         id: "cosmetic_pickaxe_02",
-        name: "Star Wand",
-        price: 500,
+        name: "Axe of champions 2.0",
+        price: 3500,
         type: "pickaxe"
     },
     {
         id: "cosmetic_emote_03",
-        name: "Floss",
-        price: 200,
+        name: "Take The L",
+        price: 10000,
         type: "emote"
     }
 ];
